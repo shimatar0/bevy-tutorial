@@ -17,8 +17,20 @@ fn main() {
             ..default()
         }))
         .add_startup_system(spawn_camera)
+        .add_startup_system(spawn_player)
         .add_startup_system_to_stage(StartupStage::PreStartup, load_ascii)
         .run();
+}
+
+fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
+    let mut sprite = TextureAtlasSprite::new(1);
+    sprite.custom_size = Some(Vec2::splat(1.0));
+    commands.spawn(SpriteSheetBundle {
+        sprite: sprite,
+        texture_atlas: ascii.0.clone(),
+        transform: Transform { translation: Vec3::new(0.0, 0.0, 900.0), ..Default::default() },
+        ..Default::default()
+    });
 }
 
 fn spawn_camera(mut commands: Commands) {
