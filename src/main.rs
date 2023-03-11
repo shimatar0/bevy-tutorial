@@ -17,6 +17,7 @@ fn main() {
             ..default()
         }))
         .add_startup_system(spawn_camera)
+        .add_startup_system_to_stage(StartupStage::PreStartup, load_ascii)
         .run();
 }
 
@@ -30,4 +31,25 @@ fn spawn_camera(mut commands: Commands) {
 
     camera.projection.scaling_mode = ScalingMode::None;
     commands.spawn(camera);
+}
+
+#[derive(Resource)]
+struct AsciiSheet(Handle<TextureAtlas>);
+
+fn load_ascii(
+    mut commands: Commands,
+    assets: Res<AssetServer>,
+    mut texture_aliases: ResMut<Assets<TextureAtlas>>,
+) {
+    let image = assets.load("Ascii.png");
+    let atlas = TextureAtlas::from_grid(
+        image,
+        Vec2::splat(9.0),
+        16,
+        16,
+        Some(Vec2::splat(2.0)),
+        None,
+    );
+    let atlas_handle = texture_aliases.add(atlas);
+    commands.insert_resource(AsciiSheet(atlas_handle));
 }
