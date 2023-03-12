@@ -1,4 +1,4 @@
-use bevy::{prelude::*, sprite::collide_aabb::collide};
+use bevy::{prelude::*, sprite::collide_aabb::collide, transform};
 use bevy_inspector_egui::Inspectable;
 
 use crate::{
@@ -17,7 +17,8 @@ pub struct Player {
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(spawn_player)
-            .add_system(player_movement);
+            .add_system(camera_follow.label("movement"))
+            .add_system(player_movement.label("movement"));
     }
 }
 
@@ -54,6 +55,17 @@ fn player_movement(
     if wall_collision_check(target, &wall_query) {
         transform.translation = target;
     }
+}
+
+fn camera_follow(
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_query: Query<&mut Transform, (Without<Player>, With<Camera>)>,
+) {
+    let player_transform = player_query.single();
+    let mut camera_transform = camera_query.single_mut();
+
+    camera_transform.translation.x = player_transform.translation.x;
+    camera_transform.translation.y = player_transform.translation.y;
 }
 
 fn wall_collision_check(
