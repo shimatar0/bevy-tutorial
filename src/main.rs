@@ -1,36 +1,42 @@
-use bevy::{prelude::*, render::camera::ScalingMode};
+use ascii::AsciiPlugin;
+use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
+use debug::DebugPlugin;
+use player::PlayerPlugin;
+use tilemap::TileMapPlugin;
+mod ascii;
+mod debug;
+mod player;
+mod tilemap;
 
 pub const CLEAR: Color = Color::rgb(0.1, 0.1, 0.1);
 pub const RESOLUTION: f32 = 16.0 / 9.0;
+pub const TILE_SIZE: f32 = 0.1;
 
 fn main() {
+    let height = 900.0;
     App::new()
         .insert_resource(ClearColor(CLEAR))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
-                width: 1600.0,
-                height: 900.0,
-                title: "Bevy Tutorial".to_string(),
-                resizable: false,
-                ..default()
-            },
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        width: height * RESOLUTION,
+                        height: height,
+                        title: "Bevy Tutorial".to_string(),
+                        resizable: false,
+                        present_mode: PresentMode::Fifo,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
         .add_startup_system(spawn_camera)
-        .add_startup_system(spawn_player)
-        .add_startup_system_to_stage(StartupStage::PreStartup, load_ascii)
+        .add_plugin(DebugPlugin)
+        .add_plugin(PlayerPlugin)
+        .add_plugin(AsciiPlugin)
+        .add_plugin(TileMapPlugin)
         .run();
-}
-
-fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
-    let mut sprite = TextureAtlasSprite::new(1);
-    sprite.custom_size = Some(Vec2::splat(1.0));
-    commands.spawn(SpriteSheetBundle {
-        sprite: sprite,
-        texture_atlas: ascii.0.clone(),
-        transform: Transform { translation: Vec3::new(0.0, 0.0, 900.0), ..Default::default() },
-        ..Default::default()
-    });
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -43,25 +49,4 @@ fn spawn_camera(mut commands: Commands) {
 
     camera.projection.scaling_mode = ScalingMode::None;
     commands.spawn(camera);
-}
-
-#[derive(Resource)]
-struct AsciiSheet(Handle<TextureAtlas>);
-
-fn load_ascii(
-    mut commands: Commands,
-    assets: Res<AssetServer>,
-    mut texture_aliases: ResMut<Assets<TextureAtlas>>,
-) {
-    let image = assets.load("Ascii.png");
-    let atlas = TextureAtlas::from_grid(
-        image,
-        Vec2::splat(9.0),
-        16,
-        16,
-        Some(Vec2::splat(2.0)),
-        None,
-    );
-    let atlas_handle = texture_aliases.add(atlas);
-    commands.insert_resource(AsciiSheet(atlas_handle));
 }
