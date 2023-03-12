@@ -40,11 +40,9 @@ fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
                         z: 100.0,
                     },
                 );
-
-                if char == "#" {
+                if char == '#' {
                     commands.entity(tile).insert(TileCollider);
                 }
-
                 tiles.push(tile);
             }
         }
