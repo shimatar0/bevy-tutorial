@@ -7,10 +7,13 @@ use bevy::prelude::*;
 
 use crate::{
     ascii::{spawn_ascii_sprite, AsciiSheet},
-    TILE_SIZE,
+    GameState, TILE_SIZE,
 };
 
 pub struct TileMapPlugin;
+
+#[derive(Component)]
+pub struct Map;
 
 #[derive(Component)]
 pub struct EncounterSpawner;
@@ -20,7 +23,35 @@ pub struct TileCollider;
 
 impl Plugin for TileMapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(create_simple_map);
+        app.add_startup_system(create_simple_map)
+            .add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(show_map))
+            .add_system_set(SystemSet::on_exit(GameState::Overworld).with_system(hide_map));
+    }
+}
+
+fn hide_map(
+    children_query: Query<&Children, With<Map>>,
+    mut children_visibility_query: Query<&mut Visibility, Without<Map>>,
+) {
+    if let Ok(children) = children_query.get_single() {
+        for child in children.iter() {
+            if let Ok(mut child_vis) = children_visibility_query.get_mut(*child) {
+                child_vis.is_visible = false;
+            }
+        }
+    }
+}
+
+fn show_map(
+    children_query: Query<&Children, With<Map>>,
+    mut children_visibility_query: Query<&mut Visibility, Without<Map>>,
+) {
+    if let Ok(children) = children_query.get_single() {
+        for child in children.iter() {
+            if let Ok(mut child_vis) = children_visibility_query.get_mut(*child) {
+                child_vis.is_visible = true;
+            }
+        }
     }
 }
 
@@ -65,5 +96,6 @@ fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
         .insert(Name::new("Map"))
         .insert(Transform::default())
         .insert(GlobalTransform::default())
+        .insert(Map)
         .push_children(&tiles);
 }

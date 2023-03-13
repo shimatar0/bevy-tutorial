@@ -12,27 +12,74 @@ pub struct PlayerPlugin;
 #[derive(Component, Inspectable)]
 pub struct Player {
     speed: f32,
+    just_moved: bool,
 }
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::on_update(GameState::Overworld)
-                .with_system(player_encounter_checking.after("movement"))
-                .with_system(camera_follow.after("movement"))
-                .with_system(player_movement.label("movement")),
-        )
-        .add_startup_system(spawn_player);
+        app.add_system_set(SystemSet::on_enter(GameState::Overworld).with_system(show_player))
+            .add_system_set(SystemSet::on_exit(GameState::Overworld).with_system(hide_player))
+            .add_system_set(
+                SystemSet::on_update(GameState::Overworld)
+                    .with_system(player_encounter_checking.after("movement"))
+                    .with_system(camera_follow.after("movement"))
+                    .with_system(player_movement.label("movement")),
+            )
+            .add_system_set(SystemSet::on_update(GameState::Combad).with_system(test_exit_combad))
+            .add_startup_system(spawn_player);
+    }
+}
+
+fn test_exit_combad(mut keyboard: ResMut<Input<KeyCode>>, mut state: ResMut<State<GameState>>) {
+    if keyboard.just_pressed(KeyCode::Space) {
+        println!("Changeing to Overworld");
+        state.set(GameState::Overworld).unwrap();
+        keyboard.clear();
+    }
+}
+
+fn hide_player(
+    mut player_query: Query<&mut Visibility, With<Player>>,
+    children_query: Query<&Children, With<Player>>,
+    mut children_visibility_query: Query<&mut Visibility, Without<Player>>,
+) {
+    let mut player_vis = player_query.single_mut();
+    player_vis.is_visible = false;
+
+    if let Ok(children) = children_query.get_single() {
+        for child in children.iter() {
+            if let Ok(mut child_vis) = children_visibility_query.get_mut(*child) {
+                child_vis.is_visible = false;
+            }
+        }
+    }
+}
+
+fn show_player(
+    mut player_query: Query<&mut Visibility, With<Player>>,
+    children_query: Query<&Children, With<Player>>,
+    mut children_visibility_query: Query<&mut Visibility, Without<Player>>,
+) {
+    let mut player_vis = player_query.single_mut();
+    player_vis.is_visible = true;
+
+    if let Ok(children) = children_query.get_single() {
+        for child in children.iter() {
+            if let Ok(mut child_vis) = children_visibility_query.get_mut(*child) {
+                child_vis.is_visible = true;
+            }
+        }
     }
 }
 
 fn player_movement(
-    mut player_query: Query<(&Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &mut Transform)>,
     wall_query: Query<&Transform, (With<TileCollider>, Without<Player>)>,
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    let (player, mut transform) = player_query.single_mut();
+    let (mut player, mut transform) = player_query.single_mut();
+    player.just_moved = false;
 
     let mut y_delta = 0.0;
     if keyboard.pressed(KeyCode::W) {
@@ -56,6 +103,9 @@ fn player_movement(
         .any(|&transform| wall_collision_check(target, transform.translation))
     {
         transform.translation = target;
+        if x_delta != 0.0 {
+            player.just_moved = true;
+        }
     }
 
     let target = transform.translation + Vec3::new(0.0, y_delta, 0.0);
@@ -64,18 +114,24 @@ fn player_movement(
         .any(|&transform| wall_collision_check(target, transform.translation))
     {
         transform.translation = target;
+        if y_delta != 0.0 {
+            player.just_moved = true;
+        }
     }
 }
 
 fn player_encounter_checking(
-    player_query: Query<&Transform, With<Player>>,
+    player_query: Query<(&Player, &Transform)>,
     encounter_query: Query<&mut Transform, (With<EncounterSpawner>, Without<Player>)>,
     mut state: ResMut<State<GameState>>,
 ) {
-    let player_translation = player_query.single().translation;
-    if encounter_query
-        .iter()
-        .any(|&transform| wall_collision_check(player_translation, transform.translation))
+    let (player, player_transform) = player_query.single();
+    let player_translation = player_transform.translation;
+
+    if player.just_moved
+        && encounter_query
+            .iter()
+            .any(|&transform| wall_collision_check(player_translation, transform.translation))
     {
         println!("Changeing to combat");
         state
@@ -117,7 +173,10 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
     commands
         .entity(player)
         .insert(Name::new("Player"))
-        .insert(Player { speed: 3.0 });
+        .insert(Player {
+            speed: 3.0,
+            just_moved: false,
+        });
 
     let background = spawn_ascii_sprite(
         &mut commands,
