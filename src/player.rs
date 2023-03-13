@@ -9,6 +9,11 @@ use crate::{
 
 pub struct PlayerPlugin;
 
+#[derive(Component)]
+pub struct EncounterTrackrer {
+    timer: Timer,
+}
+
 #[derive(Component, Inspectable)]
 pub struct Player {
     speed: f32,
@@ -121,11 +126,12 @@ fn player_movement(
 }
 
 fn player_encounter_checking(
-    player_query: Query<(&Player, &Transform)>,
+    mut player_query: Query<(&mut Player, &mut EncounterTrackrer, &Transform)>,
     encounter_query: Query<&mut Transform, (With<EncounterSpawner>, Without<Player>)>,
     mut state: ResMut<State<GameState>>,
+    time: Res<Time>,
 ) {
-    let (player, player_transform) = player_query.single();
+    let (mut player, mut encounter_tracker, player_transform) = player_query.single_mut();
     let player_translation = player_transform.translation;
 
     if player.just_moved
@@ -133,10 +139,14 @@ fn player_encounter_checking(
             .iter()
             .any(|&transform| wall_collision_check(player_translation, transform.translation))
     {
-        println!("Changeing to combat");
-        state
-            .set(GameState::Combad)
-            .expect("Failed to change state");
+        encounter_tracker.timer.tick(time.delta());
+
+        if encounter_tracker.timer.just_finished() {
+            println!("Changeing to combat");
+            state
+                .set(GameState::Combad)
+                .expect("Failed to change state");
+        }
     }
 }
 
@@ -176,6 +186,9 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
         .insert(Player {
             speed: 3.0,
             just_moved: false,
+        })
+        .insert(EncounterTrackrer {
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         });
 
     let background = spawn_ascii_sprite(
