@@ -1,9 +1,11 @@
 use ascii::AsciiPlugin;
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
+use combat::CombatPlugin;
 use debug::DebugPlugin;
 use player::PlayerPlugin;
 use tilemap::TileMapPlugin;
 mod ascii;
+mod combat;
 mod debug;
 mod player;
 mod tilemap;
@@ -15,7 +17,7 @@ pub const TILE_SIZE: f32 = 0.1;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub enum GameState {
     Overworld,
-    Combad,
+    Combat,
 }
 
 fn main() {
@@ -43,6 +45,7 @@ fn main() {
         .add_plugin(PlayerPlugin)
         .add_plugin(AsciiPlugin)
         .add_plugin(TileMapPlugin)
+        .add_plugin(CombatPlugin)
         .run();
 }
 

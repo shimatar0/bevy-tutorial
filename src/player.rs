@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide, transform};
-use bevy_inspector_egui::Inspectable;
+use bevy_inspector_egui::{reflect, Inspectable};
 
 use crate::{
     ascii::{spawn_ascii_sprite, AsciiSheet},
@@ -9,7 +9,8 @@ use crate::{
 
 pub struct PlayerPlugin;
 
-#[derive(Component)]
+#[derive(Default, Component, Reflect)]
+#[reflect(Component)]
 pub struct EncounterTrackrer {
     timer: Timer,
 }
@@ -30,7 +31,7 @@ impl Plugin for PlayerPlugin {
                     .with_system(camera_follow.after("movement"))
                     .with_system(player_movement.label("movement")),
             )
-            .add_system_set(SystemSet::on_update(GameState::Combad).with_system(test_exit_combad))
+            .add_system_set(SystemSet::on_update(GameState::Combat).with_system(test_exit_combad))
             .add_startup_system(spawn_player);
     }
 }
@@ -131,7 +132,7 @@ fn player_encounter_checking(
     mut state: ResMut<State<GameState>>,
     time: Res<Time>,
 ) {
-    let (mut player, mut encounter_tracker, player_transform) = player_query.single_mut();
+    let (player, mut encounter_tracker, player_transform) = player_query.single_mut();
     let player_translation = player_transform.translation;
 
     if player.just_moved
@@ -144,7 +145,7 @@ fn player_encounter_checking(
         if encounter_tracker.timer.just_finished() {
             println!("Changeing to combat");
             state
-                .set(GameState::Combad)
+                .set(GameState::Combat)
                 .expect("Failed to change state");
         }
     }
