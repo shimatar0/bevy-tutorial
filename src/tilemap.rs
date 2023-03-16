@@ -72,6 +72,7 @@ fn create_simple_map(mut commands: Commands, ascii: Res<AsciiSheet>) {
                         y: -(y as f32) * TILE_SIZE,
                         z: 100.0,
                     },
+                    Vec3::splat(1.0),
                 );
                 if char == '#' {
                     commands.entity(tile).insert(TileCollider);

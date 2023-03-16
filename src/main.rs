@@ -2,11 +2,13 @@ use ascii::AsciiPlugin;
 use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
 use combat::CombatPlugin;
 use debug::DebugPlugin;
+use fadeout::FadeoutPlugin;
 use player::PlayerPlugin;
 use tilemap::TileMapPlugin;
 mod ascii;
 mod combat;
 mod debug;
+mod fadeout;
 mod player;
 mod tilemap;
 
@@ -44,6 +46,7 @@ fn main() {
         .add_plugin(DebugPlugin)
         .add_plugin(PlayerPlugin)
         .add_plugin(AsciiPlugin)
+        .add_plugin(FadeoutPlugin)
         .add_plugin(TileMapPlugin)
         .add_plugin(CombatPlugin)
         .run();

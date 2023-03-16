@@ -1,8 +1,10 @@
-use bevy::{prelude::*, sprite::collide_aabb::collide, transform};
-use bevy_inspector_egui::{reflect, Inspectable};
+use bevy::{prelude::*, sprite::collide_aabb::collide};
+use bevy_inspector_egui::Inspectable;
 
 use crate::{
     ascii::{spawn_ascii_sprite, AsciiSheet},
+    combat::CombatStats,
+    fadeout::create_fadeout,
     tilemap::{EncounterSpawner, TileCollider},
     GameState, TILE_SIZE,
 };
@@ -36,10 +38,15 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn test_exit_combad(mut keyboard: ResMut<Input<KeyCode>>, mut state: ResMut<State<GameState>>) {
+fn test_exit_combad(
+    mut commands: Commands,
+    mut keyboard: ResMut<Input<KeyCode>>,
+    mut state: ResMut<State<GameState>>,
+    ascii: Res<AsciiSheet>,
+) {
     if keyboard.just_pressed(KeyCode::Space) {
         println!("Changeing to Overworld");
-        state.set(GameState::Overworld).unwrap();
+        create_fadeout(&mut commands, GameState::Overworld, &ascii);
         keyboard.clear();
     }
 }
@@ -127,9 +134,11 @@ fn player_movement(
 }
 
 fn player_encounter_checking(
+    mut commands: Commands,
     mut player_query: Query<(&mut Player, &mut EncounterTrackrer, &Transform)>,
     encounter_query: Query<&mut Transform, (With<EncounterSpawner>, Without<Player>)>,
     mut state: ResMut<State<GameState>>,
+    ascii: Res<AsciiSheet>,
     time: Res<Time>,
 ) {
     let (player, mut encounter_tracker, player_transform) = player_query.single_mut();
@@ -143,10 +152,7 @@ fn player_encounter_checking(
         encounter_tracker.timer.tick(time.delta());
 
         if encounter_tracker.timer.just_finished() {
-            println!("Changeing to combat");
-            state
-                .set(GameState::Combat)
-                .expect("Failed to change state");
+            create_fadeout(&mut commands, GameState::Combat, &ascii);
         }
     }
 }
@@ -179,6 +185,7 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
         1,
         Color::rgb(0.3, 0.3, 0.9),
         Vec3::new(2.0 * TILE_SIZE, -2.0 * TILE_SIZE, 900.0),
+        Vec3::splat(1.0),
     );
 
     commands
@@ -187,6 +194,12 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
         .insert(Player {
             speed: 3.0,
             just_moved: false,
+        })
+        .insert(CombatStats {
+            health: 10,
+            attack: 2,
+            defense: 1,
+            max_halth: 10,
         })
         .insert(EncounterTrackrer {
             timer: Timer::from_seconds(1.0, TimerMode::Repeating),
@@ -202,6 +215,7 @@ fn spawn_player(mut commands: Commands, ascii: Res<AsciiSheet>) {
             y: 0.0,
             z: -1.0,
         },
+        Vec3::splat(1.0),
     );
     commands.entity(background).insert(Name::new("Background"));
 
